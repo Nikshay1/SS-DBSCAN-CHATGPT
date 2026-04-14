@@ -5,15 +5,11 @@ This repository contains a Python implementation of:
 - **Simple DBSCAN**
 - **SS-DBSCAN** from the IEEE Access 2024 paper
 
-It also generates the minimum lab outputs requested in your checklist:
+The project now runs against the reference dataset from the public SS-DBSCAN repo:
 
-- Simple algorithm description
-- Research paper algorithm description
-- Parameter-difference table
-- Graph comparing simple DBSCAN vs SS-DBSCAN
-- Python runnable code
-- Theoretical difference between both algorithms
-- Runtime/time-analysis graph
+- `dataset/lettersPreProc.csv`
+- 16 feature columns
+- 1 class column in the final position
 
 ## Run the project
 
@@ -21,14 +17,29 @@ It also generates the minimum lab outputs requested in your checklist:
 python run_project.py
 ```
 
+The default run uses the reference repo parameters:
+
+- `eps = 8`
+- `min_pts = 17`
+
+## Outputs
+
+Running the project generates:
+
+- `outputs/metrics_summary.csv`
+- `outputs/runtime_summary.csv`
+- `outputs/cluster_assignments.csv`
+- `outputs/figures/dbscan_vs_ssdbscan.png`
+- `outputs/figures/runtime_comparison.png`
+
 ## Main files
 
-- `run_project.py` - one-command runner
+- `run_project.py` - one-command runner for `dataset/lettersPreProc.csv`
 - `src/ssdbscan_lab/algorithms.py` - DBSCAN and SS-DBSCAN implementations
-- `src/ssdbscan_lab/datasets.py` - synthetic varied-density dataset
-- `src/ssdbscan_lab/benchmark.py` - runtime benchmark
+- `src/ssdbscan_lab/datasets.py` - letters dataset loader and importance rule metadata
+- `src/ssdbscan_lab/benchmark.py` - runtime benchmark on dataset subsets
 - `src/ssdbscan_lab/visualization.py` - comparison plots
-- `docs/SS_DBSCAN_Lab_Report.md` - theory + comparison report
+- `docs/SS_DBSCAN_Lab_Report.md` - project write-up
 - `outputs/` - generated graphs and CSV summaries
 
 ## Paper used

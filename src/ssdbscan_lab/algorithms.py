@@ -20,23 +20,32 @@ class ClusteringResult:
 
     labels: np.ndarray
     core_mask: np.ndarray
-    distance_matrix: np.ndarray
     n_clusters: int
 
 
-def _pairwise_distance_matrix(features: np.ndarray) -> np.ndarray:
-    """Compute the full Euclidean distance matrix."""
+def _build_neighbor_graph(features: np.ndarray, eps: float, *, chunk_size: int = 128) -> list[np.ndarray]:
+    """Compute epsilon-neighborhoods without materializing a full distance matrix."""
     features = np.asarray(features, dtype=float)
     if features.ndim != 2:
-        raise ValueError("Input data must be a 2D matrix.")
+        raise ValueError("Distance features must be a 2D matrix.")
 
-    deltas = features[:, np.newaxis, :] - features[np.newaxis, :, :]
-    return np.sqrt(np.sum(deltas * deltas, axis=2))
+    squared_norms = np.einsum("ij,ij->i", features, features)
+    eps_squared = eps * eps
+    neighbors: list[np.ndarray] = [np.empty(0, dtype=int) for _ in range(features.shape[0])]
 
+    for start_index in range(0, features.shape[0], chunk_size):
+        stop_index = min(start_index + chunk_size, features.shape[0])
+        block = features[start_index:stop_index]
+        block_squared_norms = np.einsum("ij,ij->i", block, block)[:, None]
 
-def _neighbor_indices(distance_matrix: np.ndarray, point_index: int, eps: float) -> np.ndarray:
-    """Return all points within eps, including the point itself."""
-    return np.flatnonzero(distance_matrix[point_index] <= eps)
+        squared_distances = block_squared_norms + squared_norms[None, :] - 2.0 * (block @ features.T)
+        np.maximum(squared_distances, 0.0, out=squared_distances)
+        within_eps = squared_distances <= eps_squared + 1e-12
+
+        for row_offset, mask in enumerate(within_eps):
+            neighbors[start_index + row_offset] = np.flatnonzero(mask)
+
+    return neighbors
 
 
 def _expand_cluster(
@@ -47,8 +56,7 @@ def _expand_cluster(
     data: np.ndarray,
     labels: np.ndarray,
     core_mask: np.ndarray,
-    distance_matrix: np.ndarray,
-    eps: float,
+    neighbor_graph: Sequence[np.ndarray],
     min_pts: int,
     importance_rule: ImportanceRule,
 ) -> None:
@@ -56,8 +64,8 @@ def _expand_cluster(
     labels[seed_index] = cluster_id
     core_mask[seed_index] = True
 
-    queue = deque(int(idx) for idx in seed_neighbors)
-    queued = set(int(idx) for idx in seed_neighbors)
+    queue = deque(int(index) for index in seed_neighbors)
+    queued = set(int(index) for index in seed_neighbors)
 
     while queue:
         point_index = queue.popleft()
@@ -69,7 +77,7 @@ def _expand_cluster(
             continue
 
         labels[point_index] = cluster_id
-        current_neighbors = _neighbor_indices(distance_matrix, point_index, eps)
+        current_neighbors = neighbor_graph[point_index]
         is_core = len(current_neighbors) >= min_pts and importance_rule(
             data[point_index],
             point_index,
@@ -93,6 +101,7 @@ def _density_clustering(
     min_pts: int,
     distance_columns: Iterable[int],
     importance_rule: ImportanceRule,
+    require_seed_importance: bool,
 ) -> ClusteringResult:
     """Shared implementation for DBSCAN and SS-DBSCAN."""
     if eps <= 0:
@@ -104,8 +113,9 @@ def _density_clustering(
     if data.ndim != 2:
         raise ValueError("Input data must be a 2D matrix.")
 
-    distance_features = data[:, tuple(distance_columns)]
-    distance_matrix = _pairwise_distance_matrix(distance_features)
+    distance_columns = tuple(distance_columns)
+    distance_features = data[:, distance_columns]
+    neighbor_graph = _build_neighbor_graph(distance_features, eps)
 
     labels = np.full(data.shape[0], UNVISITED, dtype=int)
     core_mask = np.zeros(data.shape[0], dtype=bool)
@@ -115,9 +125,11 @@ def _density_clustering(
         if labels[point_index] != UNVISITED:
             continue
 
-        neighbors = _neighbor_indices(distance_matrix, point_index, eps)
-        is_core = len(neighbors) >= min_pts and importance_rule(data[point_index], point_index)
-        if not is_core:
+        neighbors = neighbor_graph[point_index]
+        seed_is_core = len(neighbors) >= min_pts and (
+            (not require_seed_importance) or importance_rule(data[point_index], point_index)
+        )
+        if not seed_is_core:
             labels[point_index] = NOISE
             continue
 
@@ -129,8 +141,7 @@ def _density_clustering(
             data=data,
             labels=labels,
             core_mask=core_mask,
-            distance_matrix=distance_matrix,
-            eps=eps,
+            neighbor_graph=neighbor_graph,
             min_pts=min_pts,
             importance_rule=importance_rule,
         )
@@ -138,7 +149,6 @@ def _density_clustering(
     return ClusteringResult(
         labels=labels,
         core_mask=core_mask,
-        distance_matrix=distance_matrix,
         n_clusters=cluster_id,
     )
 
@@ -157,6 +167,7 @@ def dbscan(
         min_pts=min_pts,
         distance_columns=distance_columns,
         importance_rule=lambda _point, _index: True,
+        require_seed_importance=True,
     )
 
 
@@ -175,4 +186,5 @@ def ss_dbscan(
         min_pts=min_pts,
         distance_columns=distance_columns,
         importance_rule=importance_rule,
+        require_seed_importance=False,
     )

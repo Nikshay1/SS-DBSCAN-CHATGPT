@@ -2,9 +2,13 @@
 
 ## 1. Project Objective
 
-This project compares **DBSCAN** with the **SS-DBSCAN** algorithm proposed in the paper *SS-DBSCAN: Semi-Supervised Density-Based Spatial Clustering of Applications With Noise for Meaningful Clustering in Diverse Density Data* by Abdulhameed et al., IEEE Access, 2024.
+This project compares **DBSCAN** with **SS-DBSCAN** using the reference dataset from the public `TibaZaki/SS_DBSCAN` repository: `dataset/lettersPreProc.csv`.
 
-The aim is to show how adding a user-defined **importance condition** to core-point selection can reduce wrong cluster merging when the dataset contains **different densities**.
+The goal is to reproduce the paper's main idea on a real dataset instead of a synthetic toy example:
+
+- DBSCAN uses density only.
+- SS-DBSCAN adds a dataset-specific **importance rule**.
+- The comparison shows how this extra condition changes cluster expansion, runtime, and clustering quality.
 
 ## 2. Simple Algorithm Description: DBSCAN
 
@@ -12,103 +16,129 @@ DBSCAN is an unsupervised density-based clustering algorithm.
 
 **Main idea**
 
-- For every point, find all neighbors within distance `eps`.
-- If the number of neighbors is at least `min_pts`, that point is a **core point**.
-- Start a cluster from each core point and expand it through neighboring core points.
-- Points reachable from a core point but not core themselves become **border points**.
-- Points not assigned to any cluster are labeled **noise**.
+- For each point, find all neighbors within distance `eps`.
+- If the number of neighbors is at least `min_pts`, the point is treated as dense enough to support a cluster.
+- Start a cluster from a dense point and expand through neighboring dense points.
+- Points reachable from a cluster but not dense enough to expand it behave like border points.
+- Points that never join a cluster are labeled as noise.
 
-**Core-point rule**
+**Core decision**
 
 ```text
-neighbor_count(point) >= min_pts  =>  core point
+neighbor_count(point) >= min_pts
 ```
 
 **Strengths**
 
-- Number of clusters is not required in advance.
-- Can detect arbitrary-shaped clusters.
-- Can identify noise points.
+- Does not require the number of clusters in advance.
+- Can discover non-spherical cluster shapes.
+- Naturally labels outliers as noise.
 
 **Weaknesses**
 
 - Sensitive to `eps` and `min_pts`.
-- Can merge separate clusters through dense bridge points when densities vary.
+- Can over-merge points when a single global density threshold is not suitable.
 
 ## 3. Research Paper Algorithm Description: SS-DBSCAN
 
-The paper modifies DBSCAN by adding an extra condition for core-point selection.
+SS-DBSCAN keeps the density idea of DBSCAN but injects domain knowledge through an `Is_important(point)` rule.
 
-Instead of allowing every dense point to expand a cluster, SS-DBSCAN expands only through points that satisfy a user-defined function:
+In the reference implementation style used here:
 
-```text
-Is_important(point)
-```
+- A dense seed point can start a cluster.
+- During cluster expansion, a neighbor only expands the cluster further if it is both dense and important.
 
-So the core-point rule becomes:
+So the expansion rule becomes:
 
 ```text
 neighbor_count(point) >= min_pts AND Is_important(point) == True
 ```
 
-This makes SS-DBSCAN **semi-supervised**, because domain knowledge is injected through the importance rule.
+This makes SS-DBSCAN **semi-supervised**, because the user defines what kinds of points are meaningful enough to drive expansion.
 
-### Paper-inspired `Is_important` rule used in this project
+## 4. Dataset Used in This Project
 
-The paper gives a marble example where a point is important when its radius is greater than twice the mean radius. This project uses the same style of rule on a synthetic 2D dataset with an extra `importance_radius` feature:
+This project now uses the provided reference dataset:
+
+- File: `dataset/lettersPreProc.csv`
+- Rows: `20,000`
+- Feature columns: `16`
+- Final column: class label
+- Number of classes present: `26`
+
+The reference repo describes this file as a preprocessed version of the classic letter-recognition dataset, with the letter mapped to an integer and stored in the last column.
+
+## 5. Importance Rule Used for `lettersPreProc.csv`
+
+To stay consistent with the reference repository, this project uses the same feature-based importance condition for the letters dataset.
+
+Selected feature columns:
+
+- `6, 7, 8, 9, 11, 12, 13, 14, 15, 16`
+
+Project rule:
 
 ```text
-importance_radius(point) > 2 * mean(importance_radius of all points)
+Is_important(point) = True
+if any selected feature is within 2 of that feature's maximum value
 ```
 
-Bridge points are generated with low radius, while central points in real clusters are generated with high radius. Therefore, plain DBSCAN tends to merge clusters through the bridge, while SS-DBSCAN blocks expansion through low-importance bridge points.
+Equivalent form:
 
-## 4. Parameter Difference Table
+```text
+feature_j(point) >= max(feature_j) - 2
+for at least one selected feature j
+```
+
+This means the project marks a point as important when it is close to an extreme value in at least one of the selected attributes.
+
+## 6. Parameter Difference Table
 
 | Parameter / Concept | DBSCAN | SS-DBSCAN |
 |---|---|---|
 | `eps` | Required | Required |
 | `min_pts` | Required | Required |
-| `Is_important(point)` | Not used | Required extra condition |
-| Core-point rule | `neighbor_count >= min_pts` | `neighbor_count >= min_pts AND Is_important(point)` |
+| `Is_important(point)` | Not used | Required for expansion |
+| Expansion rule | Dense points expand clusters | Dense and important points expand clusters |
 | Supervision type | Unsupervised | Semi-supervised |
 | Main control idea | Density only | Density + user-defined importance |
-| Main risk | Can merge different-density clusters through dense bridges | Depends on a meaningful importance rule |
-| Worst-case time complexity | `O(n^2)` with full distance matrix | `O(n^2)` with full distance matrix |
+| Main risk | One global density threshold may over-merge | Quality depends on the importance rule |
+| Worst-case time complexity | `O(n^2)` | `O(n^2)` |
 
-## 5. Theoretical Difference Between Algorithm 1 and Algorithm 2
+## 7. Theoretical Difference Between Algorithm 1 and Algorithm 2
 
-Here, **Algorithm 1** means simple DBSCAN and **Algorithm 2** means SS-DBSCAN from the research paper.
+Here, **Algorithm 1** is simple DBSCAN and **Algorithm 2** is SS-DBSCAN.
 
 | Point of difference | Simple DBSCAN | SS-DBSCAN |
 |---|---|---|
-| Decision basis | Density neighborhood count only | Density neighborhood count + importance condition |
-| Human knowledge | No user knowledge injected | User provides a dataset-specific condition |
-| Cluster expansion | Any core point can expand the cluster | Only important core points expand the cluster |
-| Effect on varied-density data | May over-merge clusters | Can preserve more meaningful clusters |
-| Core-point count | Usually higher | Usually lower due to the extra filter |
-| Asymptotic complexity | `O(n^2)` | `O(n^2)` |
+| Decision basis | Density neighborhood count only | Density count plus importance-guided expansion |
+| Human knowledge | No user knowledge injected | User defines which points are important |
+| Cluster growth | Any dense expansion point can continue growth | Only important dense points continue growth |
+| Effect on structure | Tends to be governed by global density | Can bias growth toward meaningful regions |
+| Core/expansion points | Usually many | Usually fewer |
+| Asymptotic runtime | `O(n^2)` | `O(n^2)` |
 
-## 6. Experimental Setup Used in This Project
+## 8. Experimental Setup Used in This Project
 
-Because the original paper datasets are not included in this repository, this project uses a **synthetic varied-density dataset** designed to demonstrate the exact issue discussed in the paper.
+### Main run configuration
 
-### Dataset design
+- Dataset: `dataset/lettersPreProc.csv`
+- `eps = 8.0`
+- `min_pts = 17`
+- Distance features: all `16` feature columns
+- Importance rule: reference-repo letters rule described above
 
-- Cluster 1: dense Gaussian blob on the left
-- Cluster 2: dense Gaussian blob on the right
-- Bridge points: low-importance points between the blobs
-- Random noise points: scattered outliers
-- Extra feature: `importance_radius`, used only by `Is_important`
+These are the same parameter values shown in the reference repository example:
 
-### Parameters used
+```text
+python3 SSDBSCAN.py lettersPreProc.csv 8 17 classes.txt
+```
 
-- `eps = 0.45`
-- `min_pts = 5`
-- Distance features = `(x, y)`
-- Importance rule = `importance_radius > 2 * mean(importance_radius)`
+### Implementation note
 
-## 7. Graph: Simple Algorithm vs Research Paper Algorithm
+The original toy version of this lab used a full pairwise distance matrix. That approach is too memory-heavy for 20,000 rows, so the current project computes epsilon-neighborhoods in chunks. This preserves the expected `O(n^2)` time behavior while making the full letters dataset run feasible on a normal machine.
+
+## 9. Graph: Simple Algorithm vs Research Paper Algorithm
 
 Run the project:
 
@@ -116,7 +146,7 @@ Run the project:
 python run_project.py
 ```
 
-Then open this graph:
+Then open:
 
 ![DBSCAN vs SS-DBSCAN](../outputs/figures/dbscan_vs_ssdbscan.png)
 
@@ -124,34 +154,65 @@ Then open this graph:
 
 - Left plot = simple DBSCAN
 - Right plot = SS-DBSCAN
-- Marker size = importance radius
+- The 16-dimensional dataset is projected to 2D using PCA for visualization only
 - Black edge = point satisfies `Is_important`
-- Black ring = point is used as a core point
+- Black ring = point was used as an expansion-capable core point
 
-## 8. Time Analysis / Computation Runtime
+## 10. Measured Results from the Current Run
 
-The paper states that adding `Is_important(point)` does **not** change worst-case complexity. Both algorithms remain `O(n^2)` in the worst case when a full pairwise distance matrix is used.
+The latest project run produced the following summary:
 
-This project verifies runtime experimentally by running both algorithms on increasing dataset sizes and saving this bar chart:
+| Algorithm | `eps` | `min_pts` | Clusters found | Noise points | Core points | V-measure | ARI | Runtime (s) |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| DBSCAN | 8.0 | 17 | 1 | 0 | 19,989 | 0.0000 | 0.0000 | 6.996158 |
+| SS-DBSCAN | 8.0 | 17 | 60 | 0 | 2,216 | 0.1488 | 0.0042 | 6.652763 |
+
+### Interpretation
+
+- With these parameters, plain DBSCAN collapses the entire dataset into one cluster.
+- SS-DBSCAN is much more selective about which dense points continue cluster growth.
+- SS-DBSCAN produces many more clusters than DBSCAN and uses far fewer expansion-capable core points.
+- The clustering quality metrics are still low, so this run should be treated as a faithful reference-style reproduction, not as a fully tuned best-performing configuration.
+
+## 11. Time Analysis / Runtime Benchmark
+
+Runtime was benchmarked on random subsets of the same letters dataset.
 
 ![Runtime Comparison](../outputs/figures/runtime_comparison.png)
 
-Numeric timing values are written to:
+Numeric timings written by the current project run:
 
-```text
-outputs/runtime_summary.csv
-```
+| Points | DBSCAN (s) | SS-DBSCAN (s) |
+|---:|---:|---:|
+| 1,000 | 0.040942 | 0.034088 |
+| 2,000 | 0.150909 | 0.117618 |
+| 4,000 | 0.464968 | 0.317987 |
+| 8,000 | 2.669778 | 1.209715 |
 
-## 9. Output Files Produced by This Project
+### Runtime observation
+
+- Both algorithms grow roughly quadratically as the dataset size increases.
+- On these subset runs, SS-DBSCAN is faster than DBSCAN because the importance condition reduces the number of points that continue expansion.
+
+## 12. Output Files Produced by This Project
 
 After running `python run_project.py`, these files are generated:
 
 - `outputs/metrics_summary.csv`
 - `outputs/runtime_summary.csv`
+- `outputs/cluster_assignments.csv`
 - `outputs/figures/dbscan_vs_ssdbscan.png`
 - `outputs/figures/runtime_comparison.png`
 
-## 10. How to Run on Python
+`outputs/cluster_assignments.csv` stores, for each row in the dataset:
+
+- original class label
+- DBSCAN cluster label
+- SS-DBSCAN cluster label
+- whether the point is important under the letters rule
+- the number of selected features that triggered importance
+
+## 13. How to Run on Python
 
 From the project root:
 
@@ -167,12 +228,16 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path("src").resolve()))
 from ssdbscan_lab.algorithms import dbscan, ss_dbscan
+from ssdbscan_lab.datasets import load_letters_dataset
 ```
 
-## 11. Short Conclusion
+## 14. Short Conclusion
 
-Simple DBSCAN uses only density to decide core points, so it can merge clusters when bridge points are dense enough. SS-DBSCAN adds a user-defined importance condition and can therefore produce more meaningful clusters for varied-density data, while keeping the same `O(n^2)` worst-case complexity reported in the paper.
+This project now runs on the real `lettersPreProc.csv` dataset from the reference SS-DBSCAN repository instead of a synthetic demo dataset. DBSCAN uses density alone and, with the reference parameters, merges the data into one cluster. SS-DBSCAN adds a feature-based importance rule and therefore restricts expansion much more strongly, producing a very different clustering structure while keeping the same worst-case `O(n^2)` time complexity.
 
-## 12. Reference
+At the same time, the measured V-measure and ARI show that the current parameter setting is not strongly aligned with the ground-truth class labels. So the project now accurately demonstrates the algorithmic difference on the real dataset, but further parameter tuning would be needed for stronger clustering quality.
 
-T. Zaki Abdulhameed, S. A. Yousif, V. W. Samawi, and H. Imad Al-Shaikhli, "SS-DBSCAN: Semi-Supervised Density-Based Spatial Clustering of Applications With Noise for Meaningful Clustering in Diverse Density Data," IEEE Access, vol. 12, pp. 131507-131520, 2024, doi: 10.1109/ACCESS.2024.3457587.
+## 15. References
+
+1. T. Zaki Abdulhameed, S. A. Yousif, V. W. Samawi, and H. Imad Al-Shaikhli, "SS-DBSCAN: Semi-Supervised Density-Based Spatial Clustering of Applications With Noise for Meaningful Clustering in Diverse Density Data," IEEE Access, vol. 12, pp. 131507-131520, 2024, doi: 10.1109/ACCESS.2024.3457587.
+2. Tiba Zaki, `TibaZaki/SS_DBSCAN`, GitHub repository containing `lettersPreProc.csv` and the reference run example `SSDBSCAN.py lettersPreProc.csv 8 17 classes.txt`.

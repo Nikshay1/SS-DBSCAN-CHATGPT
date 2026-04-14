@@ -1,15 +1,15 @@
 """SS-DBSCAN lab project package."""
 
 from .algorithms import ClusteringResult, dbscan, ss_dbscan
-from .datasets import SyntheticDataset, make_varied_density_dataset
+from .datasets import LettersDataset, load_letters_dataset
 from .metrics import adjusted_rand_index, v_measure_score
 
 __all__ = [
     "ClusteringResult",
-    "SyntheticDataset",
+    "LettersDataset",
     "adjusted_rand_index",
     "dbscan",
-    "make_varied_density_dataset",
+    "load_letters_dataset",
     "ss_dbscan",
     "v_measure_score",
 ]
