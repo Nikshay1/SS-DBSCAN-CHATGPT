@@ -178,6 +178,7 @@ def ss_dbscan(
     min_pts: int,
     importance_rule: ImportanceRule,
     distance_columns: Iterable[int] = (0, 1),
+    require_seed_importance: bool = False,
 ) -> ClusteringResult:
     """Run SS-DBSCAN with a user-defined core-point importance rule."""
     return _density_clustering(
@@ -186,5 +187,5 @@ def ss_dbscan(
         min_pts=min_pts,
         distance_columns=distance_columns,
         importance_rule=importance_rule,
-        require_seed_importance=False,
+        require_seed_importance=require_seed_importance,
     )

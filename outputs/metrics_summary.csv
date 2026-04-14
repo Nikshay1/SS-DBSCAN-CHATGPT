@@ -1,3 +1,7 @@
-algorithm,eps,min_pts,importance_rule,clusters_found,noise_points,core_points,v_measure,adjusted_rand_index,runtime_seconds
-DBSCAN,8.0,17,not used,1,0,19989,0.0000,0.0000,6.996158
-SS-DBSCAN,8.0,17,"any of features 6, 7, 8, 9, 11, 12, 13, 14, 15, 16 within 2 of that feature's max",60,0,2216,0.1488,0.0042,6.652763
+dataset_id,dataset_name,dataset_source,algorithm,eps,min_pts,importance_rule,rows,features,clusters_found,noise_points,core_points,v_measure,adjusted_rand_index,runtime_seconds
+letters,lettersPreProc.csv,C:\Users\Nikshay\Documents\GitHub\SS DBSCAN CHATGPT\dataset\lettersPreProc.csv,DBSCAN,8.0,17,not used,20000,16,1,0,19989,0.0000,0.0000,20.563980
+letters,lettersPreProc.csv,C:\Users\Nikshay\Documents\GitHub\SS DBSCAN CHATGPT\dataset\lettersPreProc.csv,SS-DBSCAN,8.0,17,"any of features 6, 7, 8, 9, 11, 12, 13, 14, 15, 16 within 2 of that feature's max",20000,16,60,0,2216,0.1488,0.0042,13.936038
+iris,dataset/iris.arff,C:\Users\Nikshay\Documents\GitHub\SS DBSCAN CHATGPT\dataset\iris.arff,DBSCAN,0.9,4,not used,150,4,2,0,149,0.7337,0.5681,0.001998
+iris,dataset/iris.arff,C:\Users\Nikshay\Documents\GitHub\SS DBSCAN CHATGPT\dataset\iris.arff,SS-DBSCAN,0.9,4,"features 3, 4 inside the 15th-85th percentile band",150,4,4,0,96,0.6958,0.5592,0.001525
+synthetic,synthetic_varied_density.csv,C:\Users\Nikshay\Documents\GitHub\SS DBSCAN CHATGPT\dataset\synthetic_varied_density.csv,DBSCAN,0.45,5,not used,440,3,1,23,415,0.1294,0.0525,0.012078
+synthetic,synthetic_varied_density.csv,C:\Users\Nikshay\Documents\GitHub\SS DBSCAN CHATGPT\dataset\synthetic_varied_density.csv,SS-DBSCAN,0.45,5,importance_radius > 2.0 * mean(importance_radius),440,3,2,128,152,0.7605,0.7977,0.009416

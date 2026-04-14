@@ -13,7 +13,7 @@ import numpy as np
 
 from .algorithms import ClusteringResult
 from .benchmark import RuntimeRow
-from .datasets import LettersDataset
+from .datasets import ExperimentDataset
 
 
 def _cluster_colors(labels: np.ndarray) -> list[str]:
@@ -30,13 +30,13 @@ def _cluster_colors(labels: np.ndarray) -> list[str]:
 def _plot_one_result(
     ax: plt.Axes,
     *,
-    dataset: LettersDataset,
+    dataset: ExperimentDataset,
     result: ClusteringResult,
     title: str,
 ) -> None:
     coords = dataset.visualization_points
     importance_profile = dataset.importance_profile
-    marker_sizes = 14 + (7 * np.clip(importance_profile.scores, 0, 6))
+    marker_sizes = 16 + (7 * np.clip(importance_profile.scores, 0, 6))
     colors = _cluster_colors(result.labels)
 
     ax.scatter(
@@ -53,7 +53,7 @@ def _plot_one_result(
     ax.scatter(
         core_coords[:, 0],
         core_coords[:, 1],
-        s=26,
+        s=28,
         facecolors="none",
         edgecolors="#000000",
         linewidths=0.7,
@@ -70,7 +70,7 @@ def _plot_one_result(
 
 def plot_cluster_comparison(
     *,
-    dataset: LettersDataset,
+    dataset: ExperimentDataset,
     dbscan_result: ClusteringResult,
     ss_dbscan_result: ClusteringResult,
     output_path: Path,
@@ -92,15 +92,20 @@ def plot_cluster_comparison(
         title="Research Paper Algorithm: SS-DBSCAN",
     )
     fig.suptitle(
-        "DBSCAN vs SS-DBSCAN on lettersPreProc.csv\n"
-        "Projection = first two PCA components, black edge = important point, black ring = core point"
+        f"DBSCAN vs SS-DBSCAN on {dataset.display_name}\n"
+        "Projection uses dataset metadata; black edge = important point, black ring = core point"
     )
     fig.tight_layout(rect=(0, 0, 1, 0.96))
     fig.savefig(output_path, dpi=180, bbox_inches="tight")
     plt.close(fig)
 
 
-def plot_runtime_comparison(*, rows: list[RuntimeRow], output_path: Path) -> None:
+def plot_runtime_comparison(
+    *,
+    rows: list[RuntimeRow],
+    dataset_name: str,
+    output_path: Path,
+) -> None:
     """Save runtime bars for DBSCAN and SS-DBSCAN."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -113,7 +118,7 @@ def plot_runtime_comparison(*, rows: list[RuntimeRow], output_path: Path) -> Non
     ax.bar(x_positions - width / 2, dbscan_times, width, label="DBSCAN")
     ax.bar(x_positions + width / 2, ss_dbscan_times, width, label="SS-DBSCAN")
 
-    ax.set_title("Runtime Analysis on lettersPreProc.csv Subsets")
+    ax.set_title(f"Runtime Analysis on {dataset_name}")
     ax.set_xlabel("Number of points")
     ax.set_ylabel("Average runtime (seconds)")
     ax.set_xticks(x_positions, [str(row.n_points) for row in rows])

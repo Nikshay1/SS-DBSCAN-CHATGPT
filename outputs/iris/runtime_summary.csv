@@ -1,0 +1,5 @@
+dataset_id,dataset_name,n_points,dbscan_seconds,ss_dbscan_seconds
+iris,dataset/iris.arff,50,0.000463,0.000400
+iris,dataset/iris.arff,75,0.000791,0.000661
+iris,dataset/iris.arff,100,0.002118,0.001923
+iris,dataset/iris.arff,150,0.003286,0.002753

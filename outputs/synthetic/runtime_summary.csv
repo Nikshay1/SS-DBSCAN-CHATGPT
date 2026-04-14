@@ -1,0 +1,5 @@
+dataset_id,dataset_name,n_points,dbscan_seconds,ss_dbscan_seconds
+synthetic,synthetic_varied_density.csv,180,0.003312,0.002072
+synthetic,synthetic_varied_density.csv,300,0.005201,0.003982
+synthetic,synthetic_varied_density.csv,420,0.008467,0.006299
+synthetic,synthetic_varied_density.csv,540,0.013655,0.010939

@@ -1,0 +1,5 @@
+dataset_id,dataset_name,n_points,dbscan_seconds,ss_dbscan_seconds
+letters,lettersPreProc.csv,1000,0.055356,0.038859
+letters,lettersPreProc.csv,2000,0.280042,0.215297
+letters,lettersPreProc.csv,4000,1.059117,0.806675
+letters,lettersPreProc.csv,8000,3.685767,2.698778

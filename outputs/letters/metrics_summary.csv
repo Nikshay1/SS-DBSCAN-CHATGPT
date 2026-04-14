@@ -1,0 +1,3 @@
+dataset_id,dataset_name,dataset_source,algorithm,eps,min_pts,importance_rule,rows,features,clusters_found,noise_points,core_points,v_measure,adjusted_rand_index,runtime_seconds
+letters,lettersPreProc.csv,C:\Users\Nikshay\Documents\GitHub\SS DBSCAN CHATGPT\dataset\lettersPreProc.csv,DBSCAN,8.0,17,not used,20000,16,1,0,19989,0.0000,0.0000,20.563980
+letters,lettersPreProc.csv,C:\Users\Nikshay\Documents\GitHub\SS DBSCAN CHATGPT\dataset\lettersPreProc.csv,SS-DBSCAN,8.0,17,"any of features 6, 7, 8, 9, 11, 12, 13, 14, 15, 16 within 2 of that feature's max",20000,16,60,0,2216,0.1488,0.0042,13.936038
